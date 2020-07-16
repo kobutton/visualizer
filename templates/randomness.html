@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+
+
+{% block content %}
+<h1>Distribution of {{total_nums}} random numbers:</h1>
+<div id="donut-chart-5"></div>
+<script>
+  var c3ChartDefaults = $().c3ChartDefaults();
+
+  var categories = {{ groups|safe }};
+  var columnsData = [
+    {{ data_points|safe}}
+  ];
+
+  var verticalBarChartConfig = $().c3ChartDefaults().getDefaultBarConfig(categories);
+  verticalBarChartConfig.bindto = '#donut-chart-5';
+  verticalBarChartConfig.axis = {
+    x: {
+      categories: categories,
+      type: 'category'
+    }
+  };
+  verticalBarChartConfig.data = {
+    type: 'bar',
+    columns: columnsData,
+    // optional drilldown behavior
+  };
+  var verticalBarChart = c3.generate(verticalBarChartConfig);
+</script>
+  
+    
+{% endblock %}

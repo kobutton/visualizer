@@ -1,0 +1,126 @@
+---
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+metadata:
+  name: visualizer
+  namespace: randonet
+spec:
+  lookupPolicy:
+    local: false
+---
+kind: BuildConfig
+apiVersion: build.openshift.io/v1
+metadata:
+  name: visualizer
+  namespace: randonet
+  labels:
+    app: visualizer
+    app.kubernetes.io/component: visualizer
+    app.kubernetes.io/instance: visualizer
+    app.kubernetes.io/part-of: visualizer-app
+  annotations:
+    app.openshift.io/vcs-ref: master
+    app.openshift.io/vcs-uri: 'https://github.com/kobutton/visualizer.git'
+    openshift.io/generated-by: OpenShiftWebConsole
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: 'visualizer:latest'
+  resources: {}
+  successfulsBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5
+  nodeSelector: null
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  postCommit: {}
+  triggers: []
+  source:
+    type: Git
+    git:
+      uri: 'https://github.com/kobutton/visualizer.git'
+    contextDir: /
+  runPolicy: Serial
+---
+kind: DeploymentConfig
+apiVersion: apps.openshift.io/v1
+metadata:
+  annotations:
+    app.openshift.io/vcs-ref: master
+    app.openshift.io/vcs-uri: 'https://github.com/kobutton/visualizer.git'
+  name: visualizer
+  namespace: randonet
+  labels:
+    app: visualizer
+    app.kubernetes.io/component: visualizer
+    app.kubernetes.io/instance: visualizer
+    app.kubernetes.io/part-of: visualizer-app
+spec:
+  strategy:
+    type: Rolling
+    rollingParams:
+      updatePeriodSeconds: 1
+      intervalSeconds: 1
+      timeoutSeconds: 600
+      maxUnavailable: 25%
+      maxSurge: 25%
+    resources: {}
+    activeDeadlineSeconds: 21600
+  triggers:
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - visualizer
+        from:
+          kind: ImageStreamTag
+          namespace: randonet
+          name: 'visualizer:latest'
+    - type: ConfigChange
+  replicas: 1
+  revisionHistoryLimit: 10
+  test: false
+  selector:
+    app: visualizer
+    deploymentconfig: visualizer
+  template:
+    metadata:
+      labels:
+        app: visualizer
+        deploymentconfig: visualizer
+    spec:
+      containers:
+        - name: visualizer
+          image: >-
+            image-registry.openshift-image-registry.svc:5000/randonet/visualizer
+          env:
+            - name: RANDONET_SERVICE_URL
+              value: 'http://randonet/api/Random'
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: visualizer
+  namespace: randonet
+spec:
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  selector:
+    app: visualizer
+  type: ClusterIP
+  sessionAffinity: None
+status:
+  loadBalancer: {}
